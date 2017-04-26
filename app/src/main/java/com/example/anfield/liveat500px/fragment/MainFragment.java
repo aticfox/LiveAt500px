@@ -6,9 +6,19 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ListView;
+import android.widget.Toast;
 
 import com.example.anfield.liveat500px.R;
 import com.example.anfield.liveat500px.adapter.PhotoListAdapter;
+import com.example.anfield.liveat500px.dao.PhotoItemCollectionDao;
+import com.example.anfield.liveat500px.managet.Contextor;
+import com.example.anfield.liveat500px.managet.HttpManager;
+
+import java.io.IOException;
+
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
 
 
 /**
@@ -40,9 +50,47 @@ public class MainFragment extends Fragment {
 
     private void initInstances(View rootView) {
         // Init 'View' instance(s) with rootView.findViewById here
-        listView = (ListView)rootView.findViewById(R.id.listView);
+        listView = (ListView) rootView.findViewById(R.id.listView);
         listAdapter = new PhotoListAdapter();
         listView.setAdapter(listAdapter);
+
+        Call<PhotoItemCollectionDao> call = HttpManager.getInstance().getService().loadPhotoList();
+        call.enqueue(new Callback<PhotoItemCollectionDao>() {
+
+            //ถูกเรียกเมื่อติดต่อ server สำเร็จและได้ข้อมูลกลับมา ข้อมูลกลับมาไม่จำเป็นต้อง json อาจเป็น 404 not found ต้องฟิวเตอก่อนตั้ง if แบบข้างล่าง
+            @Override
+            public void onResponse(Call<PhotoItemCollectionDao> call,
+                                   Response<PhotoItemCollectionDao> response) {
+                //เช็คว่าข้อมูลกลับมาได้ไหม และสามารถแปลงเป็น DAO กลับมาให้เราใช้งานได้
+                if(response.isSuccessful()){
+                    PhotoItemCollectionDao dao = response.body();
+                    Toast.makeText(Contextor.getInstance().getContext(),
+                            dao.getData().get(0).getCaption(),
+                            Toast.LENGTH_SHORT).show();
+                }
+                else {
+                    //Handle
+                    try {
+                        Toast.makeText(Contextor.getInstance().getContext(),
+                                response.errorBody().string(),
+                                Toast.LENGTH_SHORT).show();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+
+            }
+
+            //
+            @Override
+            public void onFailure(Call<PhotoItemCollectionDao> call,
+                                  Throwable t) {
+                    //Handle
+                Toast.makeText(Contextor.getInstance().getContext(),
+                        t.toString(),
+                        Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
     @Override
